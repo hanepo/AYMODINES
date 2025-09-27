@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About | AYMODINES</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; --main-green: #22543d; }
+        .font-serif-display { font-family: 'Playfair Display', serif; }
+    </style>
+</head>
+<body class="bg-white flex flex-col min-h-screen">
+
+    <!-- Header will be dynamically injected here -->
+    <header id="header-placeholder"></header>
+    
+    <!-- Cart Modal (needed for header button to work) -->
+    <div id="cart-modal" class="modal fixed inset-0 z-[60] bg-black bg-opacity-50 invisible opacity-0">
+        <div id="cart-panel" class="cart-panel fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-2xl transform translate-x-full"></div>
+    </div>
+
+    <main class="flex-grow py-24 pt-40">
+        <div class="container mx-auto px-6">
+            <h1 class="text-5xl font-serif-display text-center mb-8 text-[var(--main-green)]">Our Story</h1>
+            <div class="max-w-4xl mx-auto space-y-6 text-gray-700 leading-relaxed text-lg text-center">
+                <p>Founded in 2025, AYMODINES was born from a passion for creating exceptional dining moments. Our philosophy is simple: use the finest, locally-sourced ingredients to craft dishes that are both innovative and comforting.</p>
+                <p>We believe that a meal is more than just food; it's an experience to be shared and cherished. Our chefs bring a world of experience to the kitchen, blending traditional techniques with modern culinary artistry. Every plate that leaves our kitchen is a testament to our dedication to quality, flavor, and presentation. We invite you to join us and become part of our story.</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer will be dynamically injected here -->
+    <footer id="footer-placeholder"></footer>
+
+    <!-- Core App Logic -->
+    <script src="app.js" defer></script>
+</body>
+</html>

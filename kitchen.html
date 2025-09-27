@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kitchen Display | AYMODINES</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style> 
+        body { font-family: 'Inter', sans-serif; } 
+        /* Animation for new cards */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .order-card {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <header class="bg-gray-800 p-4 sticky top-0 z-10 shadow-lg">
+        <h1 class="text-2xl font-bold text-center">AYMODINES Kitchen - Live Orders</h1>
+    </header>
+
+    <main class="p-4 md:p-6">
+        <div id="orders-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+             <div id="loading" class="col-span-full text-center py-10 text-gray-400">Listening for new orders...</div>
+        </div>
+    </main>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, doc, updateDoc, query, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Firebase Config (Provided by Environment) ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyAOCTt0PcFNWIbtYJ5hKZqMlhIB4ENfHZk",
+            authDomain: "aymodines.firebaseapp.com",
+            projectId: "aymodines",
+            storageBucket: "aymodines.firebasestorage.app",
+            messagingSenderId: "158263973138",
+            appId: "1:158263973138:web:ccfc5e7984eb82fe95cfcb",
+            measurementId: "G-GX471MJ6M6"
+            };
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const loadingEl = document.getElementById('loading');
+            const container = document.getElementById('orders-container');
+            
+            const collectionPath = `artifacts/${appId}/public/data/orders`;
+            // This query gets all orders that are not 'Ready' and orders them by when they were created.
+            // This is more robust than ordering by status, which might require a composite index in Firestore.
+            const q = query(collection(db, collectionPath), where('status', '!=', 'Ready'), orderBy('createdAt', 'asc'));
+
+            onSnapshot(q, (snapshot) => {
+                loadingEl.style.display = 'none';
+                
+                if (snapshot.empty) {
+                    container.innerHTML = '<p class="col-span-full text-center text-gray-400">No active orders.</p>';
+                    return;
+                }
+                
+                // Get all documents
+                const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                // Sort client-side: 'New' orders first, then 'Preparing'
+                orders.sort((a, b) => {
+                    const statusOrder = { 'New': 1, 'Preparing': 2 };
+                    return (statusOrder[a.status] || 99) - (statusOrder[b.status] || 99);
+                });
+
+                // Render sorted orders
+                container.innerHTML = ''; // Clear previous view
+                orders.forEach(order => {
+                    const card = createOrderCard(order);
+                    container.appendChild(card);
+                });
+
+            }, (error) => {
+                console.error("Error fetching orders:", error);
+                loadingEl.textContent = 'Error loading data.';
+                loadingEl.style.display = 'block';
+            });
+        });
+
+        function createOrderCard(order) {
+            const card = document.createElement('div');
+            let statusColor = 'bg-blue-600'; // New
+            if (order.status === 'Preparing') statusColor = 'bg-yellow-600';
+            
+            card.className = `order-card p-4 rounded-lg shadow-lg text-white ${statusColor} flex flex-col`;
+            
+            const itemsList = order.items.map(item => `<li><span class="font-bold">${item.quantity}</span> x ${item.name}</li>`).join('');
+
+            card.innerHTML = `
+                <div class="flex-grow">
+                    <div class="flex justify-between items-baseline">
+                        <h3 class="text-3xl font-bold">#${order.orderNumber}</h3>
+                        <p class="text-sm opacity-80 capitalize font-semibold">${order.status}</p>
+                    </div>
+                    <ul class="list-none space-y-1 my-3 opacity-90">
+                        ${itemsList}
+                    </ul>
+                </div>
+                <div class="mt-4 flex space-x-2">
+                    ${order.status === 'New' ? `<button data-id="${order.id}" data-status="Preparing" class="status-btn flex-1 bg-yellow-500 hover:bg-yellow-600 text-yellow-900 font-bold p-2 rounded text-sm transition-colors">Start Preparing</button>` : ''}
+                    ${order.status === 'Preparing' ? `<button data-id="${order.id}" data-status="Ready" class="status-btn flex-1 bg-green-500 hover:bg-green-600 text-green-900 font-bold p-2 rounded text-sm transition-colors">Ready for Pickup</button>` : ''}
+                </div>
+            `;
+            
+            // Attach event listener to the buttons to update status in Firestore
+            card.querySelectorAll('.status-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    e.target.disabled = true; // Prevent double clicks
+                    const docId = e.target.dataset.id;
+                    const newStatus = e.target.dataset.status;
+                    const docRef = doc(db, `artifacts/${appId}/public/data/orders`, docId);
+                    try {
+                        await updateDoc(docRef, { status: newStatus });
+                    } catch(error) {
+                        console.error("Error updating status:", error);
+                        e.target.disabled = false; // Re-enable button on error
+                    }
+                });
+            });
+            return card;
+        }
+    </script>
+</body>
+</html>
